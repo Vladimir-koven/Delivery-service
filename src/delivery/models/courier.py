@@ -22,7 +22,12 @@ class Courier(Base):
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
     status: Mapped[CourierStatus] = mapped_column(
-        PG_ENUM(CourierStatus, name="courier_status", create_type=False),
+        PG_ENUM(
+            CourierStatus,
+            name="courier_status",
+            create_type=False,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
         nullable=False,
         default=CourierStatus.OFFLINE,
         server_default=CourierStatus.OFFLINE.value,
