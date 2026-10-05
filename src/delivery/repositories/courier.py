@@ -15,7 +15,7 @@ class CourierRepository:
 
     async def get_by_id(self, courier_id: UUID) -> Courier | None:
         """Найти курьера по id. Возвращает None, если не найден."""
-        stmt = select(Courier).order_by(Courier.created_at.desc(), Courier.id.desc())
+        stmt = select(Courier).where(Courier.id == courier_id)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -47,6 +47,13 @@ class CourierRepository:
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(courier, field, value)
+        await self._session.commit()
+        await self._session.refresh(courier)
+        return courier
+
+    async def update_status(self, courier: Courier, status: CourierStatus) -> Courier:
+        """Обновить статус курьера."""
+        courier.status = status
         await self._session.commit()
         await self._session.refresh(courier)
         return courier

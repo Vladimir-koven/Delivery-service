@@ -51,3 +51,15 @@ class OrderRead(OrderBase):
     status: OrderStatus
     created_at: datetime
     updated_at: datetime
+
+
+class OrderStatusUpdate(BaseModel):
+    """Схема для смены статуса заказа."""
+
+    status: OrderStatus
+
+
+class OrderAssignCourier(BaseModel):
+    """Схема для назначения курьера на заказ."""
+
+    courier_id: UUID

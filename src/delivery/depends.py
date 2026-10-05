@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from delivery.config import Settings, get_settings
 from delivery.db.session import async_session_maker
 from delivery.repositories.courier import CourierRepository
+from delivery.repositories.order import OrderRepository
 from delivery.services.courier import CourierService
+from delivery.services.order import OrderService
 
 
 # БД
@@ -25,6 +27,12 @@ def get_courier_repository(
     return CourierRepository(session)
 
 
+def get_order_repository(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> OrderRepository:
+    return OrderRepository(session)
+
+
 # Service
 def get_courier_service(
     repository: Annotated[CourierRepository, Depends(get_courier_repository)],
@@ -33,7 +41,15 @@ def get_courier_service(
     return CourierService(repository)
 
 
+def get_order_service(
+    repository: Annotated[OrderRepository, Depends(get_order_repository)],
+    courier_repository: Annotated[CourierRepository, Depends(get_courier_repository)],
+) -> OrderService:
+    return OrderService(repository, courier_repository)
+
+
 # Алиасы
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DBSessionDep = Annotated[AsyncSession, Depends(get_db)]
 CourierServiceDep = Annotated[CourierService, Depends(get_courier_service)]
+OrderServiceDep = Annotated[OrderService, Depends(get_order_service)]
