@@ -5,5 +5,6 @@
 """
 
 from delivery.models.courier import Courier
+from delivery.models.order import Order
 
-__all__ = ["Courier"]
+__all__ = ["Courier", "Order"]

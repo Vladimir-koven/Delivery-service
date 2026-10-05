@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM, UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from delivery.db.base import Base
 from delivery.schemas.courier import CourierStatus
+
+if TYPE_CHECKING:
+    from delivery.models.order import Order
 
 
 class Courier(Base):
@@ -43,6 +49,8 @@ class Courier(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    orders: Mapped[list[Order]] = relationship(back_populates="courier")
 
     def __repr__(self) -> str:
         return f"<Courier id={self.id} name={self.full_name!r} status={self.status}>"
