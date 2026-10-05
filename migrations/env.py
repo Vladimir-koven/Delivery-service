@@ -10,7 +10,7 @@ from delivery.config import settings
 from delivery.db.base import Base
 
 # Импортируем модели, чтобы они попали в Base.metadata
-from delivery.models import courier  # noqa: F401
+from delivery import models  # noqa: F401
 
 # Alembic Config object
 config = context.config

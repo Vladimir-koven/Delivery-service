@@ -15,7 +15,7 @@ class CourierRepository:
 
     async def get_by_id(self, courier_id: UUID) -> Courier | None:
         """Найти курьера по id. Возвращает None, если не найден."""
-        stmt = select(Courier).where(Courier.id == courier_id)
+        stmt = select(Courier).order_by(Courier.created_at.desc(), Courier.id.desc())
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -24,7 +24,7 @@ class CourierRepository:
         status: CourierStatus | None = None,
     ) -> list[Courier]:
         """Список курьеров, опционально с фильтром по статусу."""
-        stmt = select(Courier).order_by(Courier.created_at.desc())
+        stmt = select(Courier).order_by(Courier.created_at.desc(), Courier.id.desc())
         if status is not None:
             stmt = stmt.where(Courier.status == status)
         result = await self._session.execute(stmt)

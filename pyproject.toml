@@ -37,7 +37,7 @@ dev = [
     "pre-commit>=4.6.2,<5.0.0",
 ]
 
-# ---------- Ruff ----------
+# Ruff
 [tool.ruff]
 line-length = 100
 target-version = "py312"
@@ -59,7 +59,7 @@ indent-style = "space"
 line-ending = "lf"
 docstring-code-format = true
 
-# ---------- Mypy ----------
+# Mypy
 [tool.mypy]
 python_version = "3.12"
 files = ["src"]
@@ -84,7 +84,31 @@ module = "tests.*"
 disallow_incomplete_defs = false
 disallow_untyped_defs = false
 
-# ---------- Bandit ----------
+# Bandit
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "venv", "__pycache__", "migrations"]
 skips = ["B101"]
+
+# Tests
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra -q --strict-markers"
+
+[tool.coverage.run]
+source = ["delivery"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
