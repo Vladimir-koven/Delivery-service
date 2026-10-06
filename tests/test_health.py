@@ -1,5 +1,7 @@
 from httpx import AsyncClient
 
+from delivery.config import settings
+
 
 async def test_health_returns_ok(client: AsyncClient) -> None:
     response = await client.get("/health")
@@ -8,4 +10,4 @@ async def test_health_returns_ok(client: AsyncClient) -> None:
     data = response.json()
     assert data["status"] == "ok"
     assert data["service"] == "delivery-service"
-    assert data["env"] == "local"
+    assert data["env"] == settings.app.env
