@@ -4,6 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -15,8 +16,32 @@ from delivery.config import settings
 from delivery.db.base import Base
 from delivery.depends import get_db
 from delivery.main import app
-from delivery.schemas.courier import CourierStatus
-from delivery.schemas.order import OrderStatus
+
+
+async def _create_all_enums(conn: AsyncConnection) -> None:
+    """Создать все ENUM-типы из Base.metadata.
+
+    Автоматически находит все PG_ENUM в моделях и создаёт их до create_all.
+    Не нужно обновлять при добавлении нового ENUM.
+    """
+    seen: set[str] = set()
+    for table in Base.metadata.sorted_tables:
+        for column in table.columns:
+            col_type = column.type
+            if isinstance(col_type, PG_ENUM) and col_type.name not in seen:
+                await conn.run_sync(col_type.create, checkfirst=True)
+                seen.add(col_type.name)
+
+
+async def _drop_all_enums(conn: AsyncConnection) -> None:
+    """Дропнуть все ENUM-типы из Base.metadata (в обратном порядке)."""
+    seen: set[str] = set()
+    for table in reversed(Base.metadata.sorted_tables):
+        for column in table.columns:
+            col_type = column.type
+            if isinstance(col_type, PG_ENUM) and col_type.name not in seen:
+                await conn.run_sync(col_type.drop, checkfirst=True)
+                seen.add(col_type.name)
 
 
 @pytest.fixture
@@ -34,26 +59,15 @@ async def engine() -> AsyncGenerator:
 @pytest.fixture(autouse=True)
 async def setup_database(engine) -> AsyncGenerator[None, None]:
     """Создать схему и ENUM-типы перед тестом, удалить после."""
-    courier_status = PG_ENUM(
-        *[e.value for e in CourierStatus],
-        name="courier_status",
-    )
-    order_status = PG_ENUM(
-        *[e.value for e in OrderStatus],
-        name="order_status",
-    )
-
     async with engine.begin() as conn:
-        await conn.run_sync(courier_status.create, checkfirst=True)
-        await conn.run_sync(order_status.create, checkfirst=True)
+        await _create_all_enums(conn)
         await conn.run_sync(Base.metadata.create_all)
 
     yield
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(courier_status.drop, checkfirst=True)
-        await conn.run_sync(order_status.drop, checkfirst=True)
+        await _drop_all_enums(conn)
 
 
 @pytest.fixture
