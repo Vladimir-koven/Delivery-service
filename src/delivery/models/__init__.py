@@ -6,5 +6,6 @@
 
 from delivery.models.courier import Courier
 from delivery.models.order import Order
+from delivery.models.user import User, UserRole
 
-__all__ = ["Courier", "Order"]
+__all__ = ["Courier", "Order", "User", "UserRole"]
