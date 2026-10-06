@@ -18,14 +18,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
-
 RUN poetry install --no-root --only main
 
 COPY src/ ./src/
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
+COPY entrypoint.sh ./
 COPY README.md ./
 
 RUN poetry install --only main
 
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["uvicorn", "delivery.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["./entrypoint.sh"]
