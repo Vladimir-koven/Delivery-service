@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-test:
+    name: Lint, type check and tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: delivery
+          POSTGRES_PASSWORD: change_me_in_prod
+          POSTGRES_DB: delivery
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U delivery"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_NAME: delivery-service
+      APP_ENV: ci
+      APP_DEBUG: "false"
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: delivery
+      POSTGRES_PASSWORD: change_me_in_prod
+      POSTGRES_DB: delivery
+      JWT_SECRET: test-secret-for-ci-only-not-for-production
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache Poetry venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --all-groups
+
+      - name: Ruff check
+        run: poetry run ruff check src
+
+      - name: Ruff format check
+        run: poetry run ruff format --check src
+
+      - name: Mypy
+        run: poetry run mypy src
+
+      - name: Create test database
+        run: |
+          PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql -h localhost -U delivery -d delivery -c "CREATE DATABASE delivery_test;"
+
+      - name: Pytest
+        run: poetry run pytest --cov=delivery --cov-report=term-missing
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t delivery-service:ci .
+
+      - name: Verify image (import delivery)
+        run: docker run --rm --entrypoint python delivery-service:ci -c "import delivery; print('OK')"
