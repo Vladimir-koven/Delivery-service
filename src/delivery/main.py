@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 
 from delivery.config import settings
+from delivery.core.logging import setup_logging
+from delivery.core.middleware import RequestLoggingMiddleware
 from delivery.exceptions.handlers import register_exception_handlers
 from delivery.routing import api_router
+
+setup_logging()
 
 
 def create_app() -> FastAPI:
@@ -14,21 +19,26 @@ def create_app() -> FastAPI:
         debug=settings.app.debug,
     )
 
-    # CORS: разрешено всё для локальной разработки.
-    # allow_credentials=False, потому что с allow_origins=["*"] браузер
-    # не пропускает credentials (правило CORS).
-    # В production заменить "*" на явный список доменов frontend.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    register_exception_handlers(app)
+    # Request logging — последним (выполняется первым)
+    app.add_middleware(RequestLoggingMiddleware)
 
+    register_exception_handlers(app)
     app.include_router(api_router)
+
+    logger.info(
+        "app_created",
+        app=settings.app.name,
+        env=settings.app.env,
+        debug=settings.app.debug,
+    )
 
     return app
 

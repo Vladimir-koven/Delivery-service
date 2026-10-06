@@ -21,6 +21,7 @@ class AppSettings(BaseSettings):
     debug: bool = Field(default=True, alias="APP_DEBUG")
     host: str = Field(default="0.0.0.0", alias="APP_HOST")  # nosec B104
     port: int = Field(default=8000, alias="APP_PORT")
+    log_level: str = Field(default="INFO", alias="APP_LOG_LEVEL")
 
 
 class DatabaseSettings(BaseSettings):
