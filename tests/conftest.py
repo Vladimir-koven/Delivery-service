@@ -16,6 +16,7 @@ from delivery.config import settings
 from delivery.db.base import Base
 from delivery.depends import get_db
 from delivery.main import app
+from delivery.schemas.user import UserCreate
 
 
 async def _create_all_enums(conn: AsyncConnection) -> None:
@@ -102,3 +103,42 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def test_user(client: AsyncClient) -> dict:
+    """Создать тестового пользователя через API. Возвращает JSON с email/паролем."""
+    payload = {
+        "email": "test@example.com",
+        "full_name": "Test User",
+        "password": "strong_password",
+    }
+    response = await client.post("/auth/register", json=payload)
+    assert response.status_code == 201
+    return {**response.json(), "password": payload["password"]}
+
+
+@pytest.fixture
+async def auth_token(client: AsyncClient, test_user: dict) -> str:
+    """Получить JWT для тестового пользователя."""
+    response = await client.post(
+        "/auth/login",
+        data={
+            "grant_type": "password",
+            "username": test_user["email"],
+            "password": test_user["password"],
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+@pytest.fixture
+async def auth_client(
+    client: AsyncClient, auth_token: str
+) -> AsyncGenerator[AsyncClient, None]:
+    """Клиент с Authorization: Bearer <token>."""
+    client.headers["Authorization"] = f"Bearer {auth_token}"
+    yield client
+    client.headers.pop("Authorization", None)
