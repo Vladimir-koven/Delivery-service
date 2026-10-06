@@ -1,9 +1,9 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 
-from delivery.depends import OrderServiceDep
+from delivery.depends import CurrentUserDep, OrderServiceDep
 from delivery.schemas.order import (
     OrderAssignCourier,
     OrderCreate,
@@ -11,11 +11,6 @@ from delivery.schemas.order import (
     OrderStatus,
     OrderStatusUpdate,
     OrderUpdate,
-)
-from delivery.services.courier import CourierNotFoundError
-from delivery.services.order import (
-    OrderNotFoundError,
-    OrderStatusTransitionError,
 )
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -30,8 +25,9 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 async def create_order(
     data: OrderCreate,
     service: OrderServiceDep,
+    _: CurrentUserDep,
 ) -> OrderRead:
-    """Создать новый заказ (статус = created, курьер не назначен)."""
+    """Создать новый заказ (требует авторизации)."""
     return await service.create(data)
 
 
@@ -51,7 +47,7 @@ async def list_orders(
         Query(),
     ] = None,
 ) -> list[OrderRead]:
-    """Список заказов с опциональными фильтрами по статусу и курьеру."""
+    """Список заказов с фильтрами (публичный)."""
     return await service.list(status=order_status, courier_id=courier_id)
 
 
@@ -64,14 +60,8 @@ async def get_order(
     order_id: UUID,
     service: OrderServiceDep,
 ) -> OrderRead:
-    """Получить заказ по id."""
-    try:
-        return await service.get(order_id)
-    except OrderNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
+    """Получить заказ по id (публичный)."""
+    return await service.get(order_id)
 
 
 @router.patch(
@@ -83,15 +73,10 @@ async def update_order(
     order_id: UUID,
     data: OrderUpdate,
     service: OrderServiceDep,
+    _: CurrentUserDep,
 ) -> OrderRead:
-    """Частично обновить клиентские поля заказа."""
-    try:
-        return await service.update(order_id, data)
-    except OrderNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
+    """Частично обновить заказ (требует авторизации)."""
+    return await service.update(order_id, data)
 
 
 @router.delete(
@@ -102,15 +87,10 @@ async def update_order(
 async def delete_order(
     order_id: UUID,
     service: OrderServiceDep,
+    _: CurrentUserDep,
 ) -> None:
-    """Удалить заказ."""
-    try:
-        await service.delete(order_id)
-    except OrderNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
+    """Удалить заказ (требует авторизации)."""
+    await service.delete(order_id)
 
 
 @router.post(
@@ -122,25 +102,10 @@ async def assign_courier(
     order_id: UUID,
     data: OrderAssignCourier,
     service: OrderServiceDep,
+    _: CurrentUserDep,
 ) -> OrderRead:
-    """Назначить курьера. Заказ должен быть в статусе created, курьер — available."""
-    try:
-        return await service.assign_courier(order_id, data.courier_id)
-    except OrderNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
-    except CourierNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
-    except OrderStatusTransitionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e),
-        ) from e
+    """Назначить курьера на заказ (требует авторизации)."""
+    return await service.assign_courier(order_id, data.courier_id)
 
 
 @router.patch(
@@ -152,17 +117,7 @@ async def update_order_status(
     order_id: UUID,
     data: OrderStatusUpdate,
     service: OrderServiceDep,
+    _: CurrentUserDep,
 ) -> OrderRead:
-    """Сменить статус заказа. Проверяет допустимость перехода."""
-    try:
-        return await service.update_status(order_id, data.status)
-    except OrderNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
-    except OrderStatusTransitionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e),
-        ) from e
+    """Сменить статус заказа (требует авторизации)."""
+    return await service.update_status(order_id, data.status)

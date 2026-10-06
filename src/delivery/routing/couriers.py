@@ -1,16 +1,15 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 
-from delivery.depends import CourierServiceDep
+from delivery.depends import CourierServiceDep, CurrentUserDep
 from delivery.schemas.courier import (
     CourierCreate,
     CourierRead,
     CourierStatus,
     CourierUpdate,
 )
-from delivery.services.courier import CourierNotFoundError
 
 router = APIRouter(prefix="/couriers", tags=["couriers"])
 
@@ -24,8 +23,9 @@ router = APIRouter(prefix="/couriers", tags=["couriers"])
 async def create_courier(
     data: CourierCreate,
     service: CourierServiceDep,
+    _: CurrentUserDep,
 ) -> CourierRead:
-    """Создать нового курьера."""
+    """Создать нового курьера (требует авторизации)."""
     return await service.create(data)
 
 
@@ -41,7 +41,7 @@ async def list_couriers(
         Query(alias="status"),
     ] = None,
 ) -> list[CourierRead]:
-    """Список курьеров с опциональным фильтром по статусу."""
+    """Список курьеров с опциональным фильтром по статусу (публичный)."""
     return await service.list(status=courier_status)
 
 
@@ -54,14 +54,8 @@ async def get_courier(
     courier_id: UUID,
     service: CourierServiceDep,
 ) -> CourierRead:
-    """Получить курьера по id."""
-    try:
-        return await service.get(courier_id)
-    except CourierNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
+    """Получить курьера по id (публичный)."""
+    return await service.get(courier_id)
 
 
 @router.patch(
@@ -73,15 +67,10 @@ async def update_courier(
     courier_id: UUID,
     data: CourierUpdate,
     service: CourierServiceDep,
+    _: CurrentUserDep,
 ) -> CourierRead:
-    """Частично обновить курьера."""
-    try:
-        return await service.update(courier_id, data)
-    except CourierNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
+    """Частично обновить курьера (требует авторизации)."""
+    return await service.update(courier_id, data)
 
 
 @router.delete(
@@ -92,12 +81,7 @@ async def update_courier(
 async def delete_courier(
     courier_id: UUID,
     service: CourierServiceDep,
+    _: CurrentUserDep,
 ) -> None:
-    """Удалить курьера."""
-    try:
-        await service.delete(courier_id)
-    except CourierNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
+    """Удалить курьера (требует авторизации)."""
+    await service.delete(courier_id)
