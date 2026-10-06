@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -14,6 +15,8 @@ from delivery.config import settings
 from delivery.db.base import Base
 from delivery.depends import get_db
 from delivery.main import app
+from delivery.schemas.courier import CourierStatus
+from delivery.schemas.order import OrderStatus
 
 
 @pytest.fixture
@@ -30,12 +33,27 @@ async def engine() -> AsyncGenerator:
 
 @pytest.fixture(autouse=True)
 async def setup_database(engine) -> AsyncGenerator[None, None]:
-    """Создать схему перед тестом, удалить после."""
+    """Создать схему и ENUM-типы перед тестом, удалить после."""
+    courier_status = PG_ENUM(
+        *[e.value for e in CourierStatus],
+        name="courier_status",
+    )
+    order_status = PG_ENUM(
+        *[e.value for e in OrderStatus],
+        name="order_status",
+    )
+
     async with engine.begin() as conn:
+        await conn.run_sync(courier_status.create, checkfirst=True)
+        await conn.run_sync(order_status.create, checkfirst=True)
         await conn.run_sync(Base.metadata.create_all)
+
     yield
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(courier_status.drop, checkfirst=True)
+        await conn.run_sync(order_status.drop, checkfirst=True)
 
 
 @pytest.fixture

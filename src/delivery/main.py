@@ -13,7 +13,10 @@ def create_app() -> FastAPI:
         debug=settings.app.debug,
     )
 
-    # CORS — для разработки открыто всё, в prod сузим
+    # CORS: разрешено всё для локальной разработки.
+    # allow_credentials=False, потому что с allow_origins=["*"] браузер
+    # не пропускает credentials (правило CORS).
+    # В production заменить "*" на явный список доменов frontend.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
