@@ -41,6 +41,14 @@ class DatabaseSettings(BaseSettings):
             f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
         )
 
+    @property
+    def test_url(self) -> str:
+        """DSN для тестовой БД (name + '_test')."""
+        return (
+            f"postgresql+asyncpg://{self.user}:{self.password}"
+            f"@{self.host}:{self.port}/{self.name}_test"
+        )
+
 
 class JwtSettings(BaseSettings):
     """Настройки JWT-авторизации."""

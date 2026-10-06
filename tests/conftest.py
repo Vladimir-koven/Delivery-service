@@ -46,9 +46,9 @@ async def _drop_all_enums(conn: AsyncConnection) -> None:
 
 @pytest.fixture
 async def engine() -> AsyncGenerator:
-    """Движок для тестовой БД (NullPool — не кэширует соединения)."""
+    """Движок для тестовой БД."""
     test_engine = create_async_engine(
-        settings.db.url,
+        settings.db.test_url,
         poolclass=NullPool,
         echo=False,
     )
