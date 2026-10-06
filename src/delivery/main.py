@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from delivery.config import settings
+from delivery.exceptions.handlers import register_exception_handlers
 from delivery.routing import api_router
 
 
@@ -25,7 +26,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Подключаем все роутеры
+    register_exception_handlers(app)
+
     app.include_router(api_router)
 
     return app

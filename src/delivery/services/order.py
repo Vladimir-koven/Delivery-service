@@ -1,5 +1,10 @@
 from uuid import UUID
 
+from delivery.exceptions import (
+    CourierNotFoundError,
+    OrderNotFoundError,
+    OrderStatusTransitionError,
+)
 from delivery.repositories.courier import CourierRepository
 from delivery.repositories.order import OrderRepository
 from delivery.schemas.courier import CourierStatus
@@ -9,16 +14,6 @@ from delivery.schemas.order import (
     OrderStatus,
     OrderUpdate,
 )
-from delivery.services.courier import CourierNotFoundError
-
-
-class OrderNotFoundError(Exception):
-    """Заказ не найден."""
-
-
-class OrderStatusTransitionError(Exception):
-    """Недопустимый переход статуса заказа."""
-
 
 ALLOWED_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.CREATED: {OrderStatus.ASSIGNED, OrderStatus.CANCELLED},
@@ -46,7 +41,7 @@ class OrderService:
         return OrderRead.model_validate(order)
 
     async def get(self, order_id: UUID) -> OrderRead:
-        """Получить заказ по id."""
+        """Получить заказ по id. Бросает OrderNotFoundError."""
         order = await self._repository.get_by_id(order_id)
         if order is None:
             raise OrderNotFoundError(f"Order {order_id} not found")
@@ -62,7 +57,7 @@ class OrderService:
         return [OrderRead.model_validate(o) for o in orders]
 
     async def update(self, order_id: UUID, data: OrderUpdate) -> OrderRead:
-        """Обновить клиентские поля заказа."""
+        """Обновить клиентские поля заказа. Бросает OrderNotFoundError."""
         order = await self._repository.get_by_id(order_id)
         if order is None:
             raise OrderNotFoundError(f"Order {order_id} not found")
@@ -74,8 +69,7 @@ class OrderService:
 
         - Заказ должен существовать.
         - Курьер должен существовать и быть AVAILABLE.
-        - Допустимый переход: CREATED → ASSIGNED.
-        - Транзакция: курьер → BUSY, заказ → ASSIGNED.
+        - Допустимый переход: CREATED -> ASSIGNED.
         """
         order = await self._repository.get_by_id(order_id)
         if order is None:
@@ -95,8 +89,8 @@ class OrderService:
                 f"Courier {courier_id} is not available (status={courier.status})"
             )
 
-        await self._courier_repository.update_status(courier, CourierStatus.BUSY)
         updated = await self._repository.assign_courier(order, courier_id)
+        await self._courier_repository.update_status(courier, CourierStatus.BUSY)
         return OrderRead.model_validate(updated)
 
     async def update_status(self, order_id: UUID, new_status: OrderStatus) -> OrderRead:
@@ -126,7 +120,7 @@ class OrderService:
         return OrderRead.model_validate(updated)
 
     async def delete(self, order_id: UUID) -> None:
-        """Удалить заказ."""
+        """Удалить заказ. Бросает OrderNotFoundError."""
         order = await self._repository.get_by_id(order_id)
         if order is None:
             raise OrderNotFoundError(f"Order {order_id} not found")

@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from delivery.exceptions import CourierNotFoundError
 from delivery.repositories.courier import CourierRepository
 from delivery.schemas.courier import (
     CourierCreate,
@@ -9,12 +10,8 @@ from delivery.schemas.courier import (
 )
 
 
-class CourierNotFoundError(Exception):
-    """урьер не найден."""
-
-
 class CourierService:
-    """изнес-логика работы с курьерами."""
+    """Бизнес-логика работы с курьерами."""
 
     def __init__(self, repository: CourierRepository) -> None:
         self._repository = repository
@@ -25,7 +22,7 @@ class CourierService:
         return CourierRead.model_validate(courier)
 
     async def get(self, courier_id: UUID) -> CourierRead:
-        """олучить курьера по id. росает CourierNotFoundError."""
+        """Получить курьера по id. Бросает CourierNotFoundError."""
         courier = await self._repository.get_by_id(courier_id)
         if courier is None:
             raise CourierNotFoundError(f"Courier {courier_id} not found")
@@ -44,7 +41,7 @@ class CourierService:
         courier_id: UUID,
         data: CourierUpdate,
     ) -> CourierRead:
-        """бновить курьера. росает CourierNotFoundError."""
+        """Обновить курьера. Бросает CourierNotFoundError."""
         courier = await self._repository.get_by_id(courier_id)
         if courier is None:
             raise CourierNotFoundError(f"Courier {courier_id} not found")
@@ -52,7 +49,7 @@ class CourierService:
         return CourierRead.model_validate(updated)
 
     async def delete(self, courier_id: UUID) -> None:
-        """далить курьера. росает CourierNotFoundError."""
+        """Удалить курьера. Бросает CourierNotFoundError."""
         courier = await self._repository.get_by_id(courier_id)
         if courier is None:
             raise CourierNotFoundError(f"Courier {courier_id} not found")

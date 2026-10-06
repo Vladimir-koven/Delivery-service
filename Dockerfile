@@ -28,6 +28,8 @@ COPY README.md ./
 
 RUN poetry install --only main
 
+ENV PATH="/app/.venv/bin:$PATH"
+
 RUN chmod +x ./entrypoint.sh
 
 EXPOSE 8000
