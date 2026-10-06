@@ -73,6 +73,10 @@ jobs:
       - name: Mypy
         run: poetry run mypy src
 
+      - name: Create test database
+        run: |
+          PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql -h localhost -U delivery -d delivery -c "CREATE DATABASE delivery_test;"
+
       - name: Pytest
         run: poetry run pytest --cov=delivery --cov-report=term-missing
 
