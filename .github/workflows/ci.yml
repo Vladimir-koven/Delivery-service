@@ -35,6 +35,9 @@ jobs:
       POSTGRES_USER: delivery
       POSTGRES_PASSWORD: change_me_in_prod
       POSTGRES_DB: delivery
+      JWT_SECRET: test-secret-for-ci-only-not-for-production
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
 
     steps:
       - name: Checkout
